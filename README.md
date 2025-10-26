@@ -59,6 +59,7 @@ Quest Network Shaper is an Android/Meta Quest oriented utility built on top of t
    cd ToyVpn-PcapPlusPlus
    ```
 2. **Open in Android Studio Giraffe+** (or use `./gradlew assembleDebug`).
+   The project is now pure Kotlin/Java; no native submodules need to be initialised.
 3. **Target**: API 33 (Quest runtime) / minimum API 29.
 4. **Deploy** the `app` module to the Quest 3 via USB (developer mode must be enabled).
 5. **Grant** VPN and storage permissions on first launch.
@@ -86,6 +87,7 @@ Quest Network Shaper is an Android/Meta Quest oriented utility built on top of t
 - The shaping engine currently focuses on timing and loss simulation. Implementing a full IP stack/NAT to forward payloads is a recommended follow-up.
 - Advanced loss models (Gilbert–Elliott), PCAP export, REST remote control, and VR overlay visualisations are earmarked as future enhancements.
 - Battery reminder notifications for sessions exceeding 60 minutes are planned but not yet implemented.
+- The original ToyVpn JNI shim and its associated instrumentation/unit tests were removed when moving to the Kotlin-only stack; new coverage should target the current architecture.
 
 ## License
 

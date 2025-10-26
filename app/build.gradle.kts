@@ -18,11 +18,6 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        externalNativeBuild {
-            cmake {
-                arguments.add("-DANDROID_PLATFORM=android-${android.compileSdk}")
-            }
-        }
     }
 
     buildTypes {
@@ -58,11 +53,6 @@ android {
     }
     buildFeatures {
         compose = true
-    }
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-        }
     }
     packaging {
         resources {
