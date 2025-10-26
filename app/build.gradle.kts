@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.questnetshaper.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.questnetshaper.app"
@@ -79,13 +79,12 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.material)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.core.ktx)
-    implementation(libs.androidx.junit.ktx)
-    testImplementation(libs.core.ktx)
+    testImplementation(libs.androidx.junit.ktx)
     testImplementation(libs.junit)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.platform.launcher)
