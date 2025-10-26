@@ -2,8 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
     <application
         android:allowBackup="true"
@@ -13,12 +16,12 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/pcapplusplus_logo_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ToyVpnPcapPlusPlus"
+        android:theme="@style/Theme.QuestNetShaper"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.ToyVpnPcapPlusPlus">
+            android:theme="@style/Theme.QuestNetShaper">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -26,9 +29,10 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".ToyVpnService"
+            android:name=".service.NetShapeVpnService"
             android:exported="false"
-            android:permission="android.permission.BIND_VPN_SERVICE">
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:foregroundServiceType="dataSync">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
