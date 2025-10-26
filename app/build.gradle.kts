@@ -8,13 +8,13 @@ plugins {
 }
 
 android {
-    namespace = "com.pcapplusplus.toyvpn"
-    compileSdk = 35
+    namespace = "com.questnetshaper.app"
+    compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.pcapplusplus.toyvpn"
-        minSdk = 26
-        targetSdk = 36
+        applicationId = "com.questnetshaper.app"
+        minSdk = 29
+        targetSdk = 33
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -82,6 +82,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
