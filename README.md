@@ -1,165 +1,92 @@
-<div align="center">
-<img src="docs/logo.png"/>
+# Quest Network Shaper & Logger
 
-[![Build and Test](https://github.com/seladb/ToyVpn-PcapPlusPlus/actions/workflows/builtAndTest.yml/badge.svg)](https://github.com/seladb/ToyVpn-PcapPlusPlus/actions/workflows/builtAndTest.yml)
+Quest Network Shaper is an Android/Meta Quest oriented utility built on top of the ToyVpn-PcapPlusPlus fork. It runs a local `VpnService` to capture device traffic, apply synthetic latency/jitter/loss/bandwidth constraints, and export one second aggregates for post-session analysis alongside OVR metrics.
 
-</div>
+## Features
 
-## Table of Contents
+- Foreground-only local VPN service that keeps running while VR titles are active.
+- Default per-app VPN targeting for `quest.eleven.forfunlabs`, with an editable package field in the dashboard.
+- Real-time shaping controls for latency, jitter, packet loss, and directional bandwidth caps with preset profiles.
+- Periodic UDP/ICMP-style reachability probe with rolling RTT/jitter/loss calculations.
+- CSV logging at 1 Hz including Wi‑Fi signal telemetry, shaping configuration, and probe results. Logs rotate under `/sdcard/Android/data/com.questnetshaper.app/files/logs/` (latest 10 files or 100 MB).
+- Material 3 Compose UI optimised for quick adjustments from a single screen, including optional notes and probe host entry.
+- Kotlin-first architecture (StateFlow + coroutines) with headless service and metrics repository for UI synchronisation.
 
-- [Overview](#overview-️)
-- [Features](#features-)
-- [Using the App](#using-the-app-)
-- [Build and run instructions](#build-and-run-instructions-%EF%B8%8F)
-- [Technical Details](#technical-details-)
-    - [Main Components](#main-components-)
-    - [Application Flows](#application-flows-)
-- [License](#license-)
+> **Note:** The reference implementation focuses on instrumentation and shaping timing. Transparent IP forwarding for all protocols requires additional work beyond the scope of this sample.
 
-## Overview 🛠️
+## Architecture Overview
 
-ToyVPN PcapPlusPlus is an Android application designed for monitoring and analyzing network traffic on an Android device.
-It achieves this by establishing a VPN tunnel and routing all network traffic through it. This method provides access to raw packets, 
-enabling real-time analysis and data storage.
-
-Use Cases:
-- **Monitoring**: Track network traffic on an Android device.
-- **Testing**: Analyze network interactions of an app during development and debugging.
-- **Learning**: Example implementation of:
-  - Android's VPN service and APIs
-  - Using PcapPlusPlus in an Android app
-
-This project is inspired by and built upon [Android's ToyVpn Example](https://android.googlesource.com/platform/development/+/master/samples/ToyVpn),
-a sample application by Google that demonstrates Android APIs for creating VPN solutions.
-
-Unlike Android's ToyVpn, this project is built with modern Android technologies such as:
-- **Kotlin** which the official programming language for Android
-- **Jetpack Compose** for UI design
-- **Newer Android API versions**
-- **MVVM** (Model-View-ViewModel) architecture
-
-## Features 🚀
-
-- VPN client app with a built-in VPN service.
-- VPN server capable of handling multiple clients simultaneously.
-- Real-time network traffic monitoring and analysis of the following protocols: IPv4/6, TCP, UDP, DNS, and TLS.
-- Storage of network traffic per client in **pcapng** files.
-
-## Using the app 📲
-
-ToyVPN consists of two components:
-- **The Android app** (VPN client)
-- **The VPN server** (acts as a gateway to the internet)
-
-The app connects to the server which in turn connects to the internet.
-In order to run the app you need to first build and run the server which needs to run on
-a separate Linux machine (see instructions [here](server/README.md#building-the-project-️)).
-Then you can run the app
-
-https://github.com/user-attachments/assets/82a2b9b1-85b5-420e-aa88-88ef54bdc77f
-
-The app connects to the VPN server, which then routes traffic to the internet. To use the app:
-1. **Set up the VPN server** on a separate Linux machine (see [server setup instructions](server/README.md#building-the-project-️)).
-2. **Launch the app** and grant necessary permissions upon first use (click "Ok" if you see the "Connection Request" modal).
-3. **Enter the server details** (IP address, port, and the secret used when running the server).
-4. **Establish a connection:**
-   - If successful, all network traffic is routed through the VPN service.
-   - The app displays live traffic statistics, including packet counts per protocol, TCP/UDP connections, DNS requests,
-   - and TLS hostnames.
-5. **Monitor the connection:**
-   - The assigned internal IP address will be displayed.
-   - If packet capture is enabled, traffic data is stored on the VPN server in `.pcapng` format.
-     The file name will be: `Internal IP address with dashes instead of dots.pcapng`,
-     for example: `10-0-0-1.pcapng`
-6. **Disconnect from the VPN** by scrolling down and tapping the "Disconnect" button.
-
-## Build and run instructions 🏗️
-
-Please follow the steps below to get a working version of the app:
-
-### Step 0: Clone with submodules
-Ensure you clone the repository with submodules to include necessary dependencies:
-```shell
-git clone --recurse-submodules https://github.com/seladb/ToyVpn-PcapPlusPlus
+```
+[TUN Interface]
+     ↓
+[PacketReader]
+     ↓
+[PacketShaper] ← [ConfigStore/StateFlow]
+     ↓
+[MetricsAggregator] → [CSV Writer]
+            ↑
+      [ActiveProbe]
 ```
 
-### Step 1: Download PcapPlusPlus pre-compiled libraries for Android
-- Download the latest PcapPlusPlus release for Android from: [PcapPlusPlus Releases](https://github.com/seladb/PcapPlusPlus/releases).
-- Extract the archive (usually `pcapplusplus-v*.*-android.tar.gz`).
-- Rename the extracted folder to `pcapplusplus` and place it under `ToyVpn-PcapPlusPlus/app/libs`.
-- Alternatively, you can build PcapPlusPlus for Android following [these instructions](https://pcapplusplus.github.io/docs/install/android).
+### Core Components
 
-### Step 2: Build and run the server
+| Component | Responsibility |
+| --- | --- |
+| `MainActivity` | Hosts the Compose dashboard with start/stop, shaping sliders, presets, probe host, and live stats. |
+| `ConfigViewModel` | Bridges UI events to a shared `ConfigStore` and exposes a combined `UiState` via `StateFlow`. |
+| `ConfigStore` / `MetricsStore` | Global state holders accessed from the service and UI without binding. |
+| `NetShapeVpnService` | Foreground `VpnService` that establishes the TUN interface, listens for configuration updates, executes the shaping pipeline, and coordinates probes/notifications. |
+| `PacketShaper` | Applies latency + jitter delay, Bernoulli loss, and token-bucket bandwidth limiting using `BandwidthLimiter`. |
+| `MetricsAggregator` | Counts packets/bytes per second, collects Wi‑Fi telemetry, merges probe stats, and appends CSV rows. |
+| `ActiveProbe` | Coroutine-based reachability probe using `InetAddress.isReachable`, updated at 500 ms cadence. |
+| `CsvWriter` | Lightweight writer with rotation guard to ensure logs remain accessible over MTP/ADB pull. |
 
-Follow the instructions in the [server README](server/README.md#building-the-project-️) to set up the VPN server.
+### Preset Profiles
 
-### Step 3: Build and run the app
-Once the server is running, you can build and run the Android app:
+| Name | Latency | Jitter | Loss | Up/Down (kbps) | Use case |
+| --- | --- | --- | --- | --- | --- |
+| None | 0 | 0 | 0 | 10 000 / 10 000 | Transparent monitoring |
+| High Ping | 120 | 20 | 0 | 10 000 / 10 000 | Remote server feel |
+| Jittery Wi‑Fi | 40 | 60 | 1 | 10 000 / 10 000 | Spiky latency |
+| Packet Loss | 40 | 10 | 3 | 10 000 / 10 000 | Mid-session loss bursts |
+| Low Bandwidth | 20 | 10 | 0 | 512 / 1024 | Throttled uplink/downlink |
 
-Using Android Studio:
-- Open the project in Android Studio.
-- Select the target device and click Run.
+## Build & Install
 
-Using the Command Line:
-```shell
-chmod +x gradlew
-./gradlew assembleDebug
-```
+1. **Clone**
+   ```bash
+   git clone https://github.com/seladb/ToyVpn-PcapPlusPlus.git
+   cd ToyVpn-PcapPlusPlus
+   ```
+2. **Open in Android Studio Giraffe+** (or use `./gradlew assembleDebug`).
+3. **Target**: API 33 (Quest runtime) / minimum API 29.
+4. **Deploy** the `app` module to the Quest 3 via USB (developer mode must be enabled).
+5. **Grant** VPN and storage permissions on first launch.
 
-## Technical details 🔍
+## Usage
 
-This section covers the internal architecture, components, and flows of the application.
+1. Launch the Quest Network Shaper app on the headset (or paired device) and grant the VPN permission prompt.
+2. Tap **Start** to establish the local VPN tunnel; a persistent notification confirms the foreground service.
+3. Use the toggles and sliders to enable shaping or logging, or pick a preset profile to apply saved values instantly.
+4. Optionally configure:
+   - Probe host (default `8.8.8.8`).
+   - Target application package for VPN capture (default `quest.eleven.forfunlabs`).
+   - Notes string recorded in the CSV output.
+5. Live metrics update every second. Shaping/logging switches propagate immediately without restarting the service.
+6. Tap **Stop** to tear down the tunnel and terminate the foreground notification.
 
-Like most Android apps, this app mostly follows the **MVVM (Model-View-ViewModel)** architecture which keeps a separation
-between the UI components and the business logic.
+## Logging & Data
 
-<img src="docs/architecture.svg"/>
+- Logs reside at `/sdcard/Android/data/com.questnetshaper.app/files/logs/netlog_YYYYMMDD_HHMMSS.csv`.
+- Each row contains timestamp, elapsed seconds, byte/packet rates, probe RTT statistics, shaping config snapshot, target package, and Wi‑Fi RSSI/link speed.
+- Example snippet: [`docs/netlog_sample.csv`](docs/netlog_sample.csv).
 
-### Main Components 📦
+## Limitations & Future Work
 
-UI components:
+- The shaping engine currently focuses on timing and loss simulation. Implementing a full IP stack/NAT to forward payloads is a recommended follow-up.
+- Advanced loss models (Gilbert–Elliott), PCAP export, REST remote control, and VR overlay visualisations are earmarked as future enhancements.
+- Battery reminder notifications for sessions exceeding 60 minutes are planned but not yet implemented.
 
-- **`ConnectScreen`**: The UI screen responsible for validating user server input. Once the user clicks "Connect," it calls
-  the view-model to establish the VPN connection and then monitors its status, redirecting the user to the `StatsScreen`
-  if successful or displaying an error message otherwise. 
-- `StatsScreen`: The UI screen responsible for displaying real-time network statistics, including total packet counts,
-  protocol distribution, TCP/UDP connections, DNS requests, and TLS hostnames. It continuously updates based on data received
-  from the view-model, which processes data from the `ToyVpnService`. The screen reacts to changes in the view-model state to
-  reflect the latest network statistics and connection status.
+## License
 
-Model and View-Model:
- 
-- **`ToyVpnViewModel`**: The view-model of the app, responsible for keeping the connection state, processing network traffic data,
-  and interacting with the `ToyVpnServiceManager`. It receives and processes packet data, and calculates protocol distribution.
-- **`ToVpnServiceManager`**:  A proxy class for interacting with `ToyVpnService`. It is primarily using broadcast messages
-  to send instructions and receive updates regarding connection status and packet data from the VPN service.
-
-VPN service:
-
-- **`ToyVpnService`**: A custom service that extends Android's `VpnService`. It is responsible for establishing a VPN connection
-  between the device and the VPN server. Here's a breakdown of its key responsibilities:
-  1. **VPN Tunnel Setup**: The service creates a VPN tunnel and routes all device traffic through it to the connected VPN server.
-  2. **Traffic Forwarding**: Once the VPN tunnel is established, the service forwards the network traffic between the device
-     and the server. This includes both inbound and outbound data.
-  3. **Statistics Update**: It processes data from `PcapPlusPlusInterface`, such as packet counts, connection status, and
-     protocol distribution. These statistics are then broadcast to the app's UI to keep it updated in real-time.
-
-PcapPlusPlus interface and JNI/native components:
-
-- **`PcapPlusPlusInterface`**: Is the wrapper class which initializes and runs JNI/native code, written in C++, that uses
-  PcapPlusPlus to analyze each packet coming either from the device or from the server. It analyzes certain protocols
-  as well as TCP/UDP connection information and more granular data on certain protocol such as DNS and TLS. It then formats
-  the analysis in a JSON structure and sends it back to the `ToyVpnService` which in turn sends it back to the app.
-
-### Application Flows 🔄
-
-The following diagrams illustrate the core workflows of the app:
-
-<img src="docs/EstablishVpnConnection.svg"/>
-
-<img src="docs/ForwardNetworkTraffic.svg"/>
-
-<img src="docs/Disconnect.svg"/>
-
-## License 📜
-This project is licensed under the **MIT License**.
+This project inherits the original [ToyVpn-PcapPlusPlus license](LICENSE).

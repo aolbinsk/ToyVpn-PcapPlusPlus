@@ -1,0 +1,3 @@
+ts_utc,elapsed_s,flows_active,bytes_up_s,bytes_down_s,pkts_up_s,pkts_down_s,rtt_ms_mean,rtt_ms_p95,jitter_ms,loss_pct,lat_ms,jit_ms,loss_pct_cfg,bw_up_kbps,bw_down_kbps,target_pkg,notes,shaping_enabled,logging_enabled,wifi_rssi_dbm,link_speed_mbps
+1736880000000,1,0,1024,2048,10,12,45.3,72.1,4.5,0.0,40,20,1.0,1024,4096,quest.eleven.forfunlabs,Match warmup,1,1,-58,866
+1736880001000,2,0,512,1024,6,8,48.7,80.0,6.2,5.0,40,20,1.0,1024,4096,quest.eleven.forfunlabs,Match warmup,1,1,-57,866
